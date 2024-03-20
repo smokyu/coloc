@@ -6,6 +6,7 @@ from bot import ColoBot
 from datetime import datetime
 from cogs.base_cog import BaseCog
 import random
+import string
 
 colobot = ColoBot
 
@@ -20,7 +21,7 @@ class Tasks(BaseCog):
         self.tasks_list = ["Aspirateur + Serpilllère", "Laver SdB", "Laver WC", "Vaisselle", "Laver vitres + miroirs"]
         self.mates = ["Pierre", "Paul", "Jacques", "Martine", "Françoise"]
         self.tasks_pebibility_score = [["Aspirateur + Serpilllère", 3], ["Laver SdB", 2], ["Laver WC", 5], ["Vaisselle", 4], ["Laver vitres + miroirs", 2]]
-        self.balances = [["Pierre", 0], ["Paul", 0], ["Jacques", 0], ["Martine", 0], ["Françoise", 0]]
+        self.balances = [["Pierre", 0], ["Paul", 0], ["Jacques", 0], ["Martine", 0], ["Françoise", 100000]]
         self.tasks_attribution = []
      
     def set_tasks(self):
@@ -58,7 +59,7 @@ class Tasks(BaseCog):
         for task in self.tasks_pebibility_score:
             task_index = task[1]
             if task_index is not None and 0 <= task_index < len(self.tasks_pebibility_score):
-                embed.add_field(name=task[0], value=task[1], inline=False)
+                embed.add_field(name=task[0], value=task[1]*10, inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
   
     @app_commands.command(name="tâches_du_jour", description="Connaitre les tâches du jour")
@@ -89,12 +90,7 @@ class Tasks(BaseCog):
                         if balance[0].lower() == task[0].lower():
                             for penibility_score in self.tasks_pebibility_score:
                                 if penibility_score[0].lower() == task_name.lower():
-                                    print(balance[0], balance[1])
-                                    print(penibility_score[1])
-                                    result = int(balance[1]) + int(penibility_score[1])
-                                    print(result)
-                                    balance[1] == result
-                                    print(balance[1])
+                                    balance[1] = int(balance[1]) + (int(penibility_score[1]) * 10)
                 break
 
 
@@ -122,6 +118,20 @@ class Tasks(BaseCog):
         for product in self.shop:
             embed.add_field(name=product[0], value=f"Prix: {product[1]} :coin:", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(name="acheter", description="`/acheter <nom_de_la_personne> <objet>` -> Acheter un objet")
+    async def buy(self, interaction: discord.Interaction, mate_name: str, obj: str):
+        for mate in self.mates:
+            for obj_in_shop in self.shop:
+                if obj_in_shop[0].lower() == obj.lower():
+                    for balance in self.balances:
+                        if balance[0].lower() == mate_name.lower():
+                            if int(balance[1]) - int(obj_in_shop[1]) >= 0:
+                                balance[1] = int(balance[1]) - int(obj_in_shop[1])
+                                receiver = interaction.guild.get_member(863821172838629377)
+                                return await receiver.send(f"**__CODE POUR ACHAT__ ({obj_in_shop[0].lower()})**:  \"*{''.join(random.choice(string.ascii_lowercase) for i in range(random.randint(8, 10)))}*\"")   
+                                await interaction.response.send_message(f"Objet acheté. Allez voir vos MP pour recevoir le code.", ephemeral=True)
+                            else: return await interaction.response.send_message("Fonds insuffisants !", ephemeral=True)
     
     class Add_a_task(discord.ui.Modal, title='Ajouter une tâche'):
         def __init__(self, tasks_cog):
@@ -171,6 +181,7 @@ class Tasks(BaseCog):
 
         async def on_submit(self, interaction: discord.Interaction):
             self.tasks_cog.mates.append(self.name.value)
+            self.tasks_cog.balances.append([self.name.value, 0])
             await interaction.response.send_message("Coloctaire prochainement ajoutée à la coloc'.", ephemeral=True)
 
     @app_commands.command(name="ajouter_un_colocataire", description="Ajoute un colocataire à la coloc'")
@@ -192,7 +203,7 @@ class Tasks(BaseCog):
 
         async def on_submit(self, interaction: discord.Interaction):
             try:
-                staff_member = interaction.guild.get_member(667045884332343308)
+                staff_member = interaction.guild.get_member(863821172838629377)
                 await staff_member.send(f"**__Avis de {self.name.value}__**:  \"*{self.feedback.value}\"*")
             except:
                 pass
